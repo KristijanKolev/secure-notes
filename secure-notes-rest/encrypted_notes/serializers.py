@@ -3,6 +3,8 @@ import os
 from rest_framework import serializers
 from django.db import transaction
 
+from cryptography.fernet import InvalidToken
+
 from encrypted_notes.models import EncryptedNote, NoteAccessKey
 from encrypted_notes.encryption_utils import (generate_password_key, encrypt_data, decrypt_data, binary_to_string,
                                               str_to_binary)
@@ -55,20 +57,21 @@ class DecryptedNoteReadSerializer(EncryptedNoteDefaultSerializer):
 
         ret = super().to_representation(instance)
         for note_access_key in instance.access_keys.all():
-            try:
-                # The BinaryFields are returned as a memoryview objects, hence the explicit conversion.
-                salt = bytes(note_access_key.salt)
-                binary_content = bytes(instance.content)
-                binary_encrypted_key = bytes(note_access_key.encrypted_key)
+            # The BinaryFields are returned as a memoryview objects, hence the explicit conversion.
+            salt = bytes(note_access_key.salt)
+            binary_content = bytes(instance.content)
+            binary_encrypted_key = bytes(note_access_key.encrypted_key)
 
-                password_encryption_key = generate_password_key(password, salt)
+            password_encryption_key = generate_password_key(password, salt)
+            try:
                 payload_encryption_key = decrypt_data(binary_encrypted_key, password_encryption_key)
-                decrypted_payload = decrypt_data(binary_content, payload_encryption_key)
-                ret['payload'] = binary_to_string(decrypted_payload)
-                return ret
-            except Exception as e:
-                # TODO: return HTTP FORBIDDEN if password has no match
+            except InvalidToken:
+                # An InvalidToken exception means the password doesn't match the given access key.
+                # Continuing cycle to try with the next key
                 continue
+            decrypted_payload = decrypt_data(binary_content, payload_encryption_key)
+            ret['payload'] = binary_to_string(decrypted_payload)
+            return ret
 
         raise serializers.ValidationError("Provided password doesn't match any of the keys for this note!")
 
@@ -88,23 +91,25 @@ class NoteAccessKeyCreationSerializer(serializers.ModelSerializer):
         new_salt = os.urandom(16)
 
         for existing_access_key in note.access_keys.all():
+            salt = bytes(existing_access_key.salt)
+            binary_encrypted_key = bytes(existing_access_key.encrypted_key)
+
+            password_encryption_key = generate_password_key(existing_password, salt)
             try:
-                salt = bytes(existing_access_key.salt)
-                binary_encrypted_key = bytes(existing_access_key.encrypted_key)
-
-                password_encryption_key = generate_password_key(existing_password, salt)
                 payload_encryption_key = decrypt_data(binary_encrypted_key, password_encryption_key)
-
-                new_password_encryption_key = generate_password_key(new_password, new_salt)
-                new_binary_encrypted_key, *_ = encrypt_data(payload_encryption_key, new_password_encryption_key)
-
-                return NoteAccessKey.objects.create(
-                    note=note,
-                    name=validated_data['name'],
-                    salt=new_salt,
-                    encrypted_key=new_binary_encrypted_key
-                )
-            except Exception as e:
+            except InvalidToken:
+                # An InvalidToken exception means the password doesn't match the given access key.
+                # Continuing cycle to try with the next key
                 continue
+
+            new_password_encryption_key = generate_password_key(new_password, new_salt)
+            new_binary_encrypted_key, *_ = encrypt_data(payload_encryption_key, new_password_encryption_key)
+
+            return NoteAccessKey.objects.create(
+                note=note,
+                name=validated_data['name'],
+                salt=new_salt,
+                encrypted_key=new_binary_encrypted_key
+            )
 
         raise serializers.ValidationError("Provided password doesn't match any of the keys for this note!")
