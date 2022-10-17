@@ -63,9 +63,10 @@ class DecryptedNoteReadSerializer(EncryptedNoteDefaultSerializer):
                 password_encryption_key = generate_password_key(password, salt)
                 payload_encryption_key = decrypt_data(binary_encrypted_key, password_encryption_key)
                 decrypted_payload = decrypt_data(binary_content, payload_encryption_key)
-                ret['payload'] = decrypted_payload
+                ret['payload'] = binary_to_string(decrypted_payload)
                 return ret
             except Exception as e:
+                # TODO: return HTTP FORBIDDEN if password is incorrect
                 continue
 
         raise serializers.ValidationError("Provided password doesn't match any of the keys for this note!")
