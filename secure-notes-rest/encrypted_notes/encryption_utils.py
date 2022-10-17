@@ -42,7 +42,7 @@ def decrypt_data(data, key):
 
 
 def binary_to_string(data):
-    return data.encode(DEFAULT_STRING_ENCODING)
+    return data.decode(DEFAULT_STRING_ENCODING)
 
 
 def str_to_binary(data):
