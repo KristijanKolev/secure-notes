@@ -4,9 +4,10 @@ from rest_framework import permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
-from encrypted_notes.models import EncryptedNote
+from encrypted_notes.models import EncryptedNote, NoteAccessKey
 from encrypted_notes.serializers import (EncryptedNoteDefaultSerializer, EncryptedNoteCreationSerializer,
-                                         DecryptedNoteReadSerializer)
+                                         DecryptedNoteReadSerializer, NoteAccessKeyCreationSerializer)
+from encrypted_notes.permissions import IsCreatorOrReadOnly
 
 
 class EncryptedNoteList(generics.ListCreateAPIView):
@@ -30,3 +31,15 @@ class DecryptedNoteDetail(APIView):
         note = get_object_or_404(EncryptedNote, pk=pk)
         serializer = DecryptedNoteReadSerializer(note, context=request.data)
         return Response(serializer.data)
+
+
+class NoteAccessKeyList(generics.ListCreateAPIView):
+    serializer_class = NoteAccessKeyCreationSerializer
+    permission_classes = [permissions.IsAuthenticated, IsCreatorOrReadOnly]
+
+    def get_queryset(self):
+        return NoteAccessKey.objects.filter(note_id=self.kwargs['note_pk'])
+
+    def perform_create(self, serializer):
+        note = get_object_or_404(EncryptedNote, pk=self.kwargs['note_pk'])
+        return serializer.save(note=note)

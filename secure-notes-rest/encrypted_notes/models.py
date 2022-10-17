@@ -19,5 +19,8 @@ class NoteAccessKey(models.Model):
     salt = models.BinaryField(max_length=16)
     encrypted_key = models.BinaryField()
 
+    class Meta:
+        unique_together = ('note', 'name')
+
     def __str__(self):
         return f'NoteAccessKey({self.id}): {self.note.title} | {self.name}'

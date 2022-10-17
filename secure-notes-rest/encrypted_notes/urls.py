@@ -6,5 +6,6 @@ app_name = 'encrypted-notes'
 
 urlpatterns = [
     path('notes/', views.EncryptedNoteList.as_view(), name='notes-list'),
-    path('notes/<int:pk>/decrypted', views.DecryptedNoteDetail.as_view(), name='note-decrypted')
+    path('notes/<int:pk>/decrypted', views.DecryptedNoteDetail.as_view(), name='note-decrypted'),
+    path('notes/<int:note_pk>/keys', views.NoteAccessKeyList.as_view(), name='note-access-keys-list')
 ]
