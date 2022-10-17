@@ -1,13 +1,13 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import generics
 from rest_framework import permissions
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
 from encrypted_notes.models import EncryptedNote, NoteAccessKey
 from encrypted_notes.serializers import (EncryptedNoteDefaultSerializer, EncryptedNoteCreationSerializer,
                                          DecryptedNoteReadSerializer, NoteAccessKeyCreationSerializer)
-from encrypted_notes.permissions import IsCreatorOrReadOnly
 
 
 class EncryptedNoteList(generics.ListCreateAPIView):
@@ -35,7 +35,13 @@ class DecryptedNoteDetail(APIView):
 
 class NoteAccessKeyList(generics.ListCreateAPIView):
     serializer_class = NoteAccessKeyCreationSerializer
-    permission_classes = [permissions.IsAuthenticated, IsCreatorOrReadOnly]
+
+    def check_permissions(self, request):
+        note = get_object_or_404(EncryptedNote, pk=self.kwargs['note_pk'])
+        if request.user.is_anonymous:
+            raise PermissionDenied("Must be authenticated to access this resource!")
+        if request.user != note.creator:
+            raise PermissionDenied("Must be note creator to access this resource!")
 
     def get_queryset(self):
         return NoteAccessKey.objects.filter(note_id=self.kwargs['note_pk'])
