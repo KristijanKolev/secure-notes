@@ -15,7 +15,7 @@ class EncryptedNoteDefaultSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = EncryptedNote
-        fields = ('id', 'title', 'created', 'last_update', 'creator')
+        fields = ('uuid', 'title', 'created', 'last_update', 'creator')
 
 
 class EncryptedNoteCreationSerializer(serializers.ModelSerializer):
@@ -27,7 +27,7 @@ class EncryptedNoteCreationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = EncryptedNote
-        exclude = ('content',)
+        exclude = ('content', 'id')
 
     def create(self, validated_data):
         password = validated_data.pop('password')
@@ -82,7 +82,7 @@ class NoteAccessKeyCreationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = NoteAccessKey
-        fields = ('name', 'created', 'existing_password', 'new_password')
+        fields = ('uuid', 'name', 'created', 'existing_password', 'new_password')
 
     def create(self, validated_data):
         note = validated_data['note']

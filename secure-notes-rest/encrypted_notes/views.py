@@ -27,8 +27,8 @@ class EncryptedNoteList(generics.ListCreateAPIView):
 class DecryptedNoteDetail(APIView):
     permission_classes = [permissions.AllowAny]
 
-    def post(self, request, pk):
-        note = get_object_or_404(EncryptedNote, pk=pk)
+    def post(self, request, uuid):
+        note = get_object_or_404(EncryptedNote, uuid=uuid)
         serializer = DecryptedNoteReadSerializer(note, context=request.data)
         return Response(serializer.data)
 
@@ -37,15 +37,15 @@ class NoteAccessKeyList(generics.ListCreateAPIView):
     serializer_class = NoteAccessKeyCreationSerializer
 
     def check_permissions(self, request):
-        note = get_object_or_404(EncryptedNote, pk=self.kwargs['note_pk'])
+        note = get_object_or_404(EncryptedNote, uuid=self.kwargs['note_uuid'])
         if request.user.is_anonymous:
             raise PermissionDenied("Must be authenticated to access this resource!")
         if request.user != note.creator:
             raise PermissionDenied("Must be note creator to access this resource!")
 
     def get_queryset(self):
-        return NoteAccessKey.objects.filter(note_id=self.kwargs['note_pk'])
+        return NoteAccessKey.objects.filter(note__uuid=self.kwargs['note_uuid'])
 
     def perform_create(self, serializer):
-        note = get_object_or_404(EncryptedNote, pk=self.kwargs['note_pk'])
+        note = get_object_or_404(EncryptedNote, uuid=self.kwargs['note_uuid'])
         return serializer.save(note=note)

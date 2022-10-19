@@ -1,7 +1,10 @@
+import uuid
+
 from django.db import models
 
 
 class EncryptedNote(models.Model):
+    uuid = models.UUIDField(unique=True, default=uuid.uuid4)
     created = models.DateTimeField(auto_now_add=True)
     last_update = models.DateTimeField(auto_now=True)
     creator = models.ForeignKey('auth.User', related_name='snippets', on_delete=models.CASCADE)
@@ -9,10 +12,11 @@ class EncryptedNote(models.Model):
     content = models.BinaryField(editable=True, blank=True)
 
     def __str__(self):
-        return f'EncryptedNote({self.id}): {self.title}'
+        return f'EncryptedNote({self.uuid}): {self.title}'
 
 
 class NoteAccessKey(models.Model):
+    uuid = models.UUIDField(unique=True, default=uuid.uuid4)
     created = models.DateTimeField(auto_now_add=True)
     note = models.ForeignKey(EncryptedNote, related_name='access_keys', on_delete=models.CASCADE)
     name = models.CharField(max_length=100)
@@ -23,4 +27,4 @@ class NoteAccessKey(models.Model):
         unique_together = ('note', 'name')
 
     def __str__(self):
-        return f'NoteAccessKey({self.id}): {self.note.title} | {self.name}'
+        return f'NoteAccessKey({self.uuid}): {self.note.title} | {self.name}'

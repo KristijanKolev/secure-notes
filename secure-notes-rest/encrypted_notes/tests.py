@@ -1,4 +1,5 @@
 import os
+import uuid
 
 from django.contrib.auth import get_user_model
 from django.urls import reverse
@@ -78,7 +79,7 @@ class NoteViewsTests(APITestCase):
         self.assertEqual(creation_response.data['title'], 'Test')
         self.assertNotIn('payload', creation_response.data)
 
-        note = EncryptedNote.objects.get(pk=creation_response.data['id'])
+        note = EncryptedNote.objects.get(uuid=creation_response.data['uuid'])
         self.assertIsNotNone(note.content)
         self.assertIsInstance(note.content, memoryview)
         self.assertEqual(note.title, 'Test')
@@ -92,7 +93,7 @@ class NoteViewsTests(APITestCase):
         note_password = '123456'
         note = self._create_note(title=note_title, payload=note_payload, note_password=note_password, creator=user)
 
-        response = self.client.post(reverse('encrypted-notes:note-decrypted', kwargs={'pk': note.id}),
+        response = self.client.post(reverse('encrypted-notes:note-decrypted', kwargs={'uuid': note.uuid}),
                                     data={'password': note_password})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['title'], note_title)
@@ -102,7 +103,7 @@ class NoteViewsTests(APITestCase):
     def test_decrypted_not_found(self):
         self._create_user('login_user', '12345')
         self.client.login(username='login_user', password='12345')
-        response = self.client.post(reverse('encrypted-notes:note-decrypted', kwargs={'pk': 1}),
+        response = self.client.post(reverse('encrypted-notes:note-decrypted', kwargs={'uuid': uuid.uuid4()}),
                                     data={'password': ''})
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
@@ -114,6 +115,6 @@ class NoteViewsTests(APITestCase):
         note_password = '123456'
         note = self._create_note(title=note_title, payload=note_payload, note_password=note_password, creator=user)
 
-        response = self.client.post(reverse('encrypted-notes:note-decrypted', kwargs={'pk': note.id}),
+        response = self.client.post(reverse('encrypted-notes:note-decrypted', kwargs={'uuid': note.uuid}),
                                     data={'password': 'incorrect'})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
