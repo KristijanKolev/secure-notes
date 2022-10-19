@@ -8,11 +8,13 @@ from rest_framework.response import Response
 from encrypted_notes.models import EncryptedNote, NoteAccessKey
 from encrypted_notes.serializers import (EncryptedNoteDefaultSerializer, EncryptedNoteCreationSerializer,
                                          DecryptedNoteReadSerializer, NoteAccessKeyCreationSerializer)
+from encrypted_notes.pagination import DefaultPagination
 
 
 class EncryptedNoteList(generics.ListCreateAPIView):
     queryset = EncryptedNote.objects.all()
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = DefaultPagination
 
     def get_serializer_class(self):
         if self.request.method == 'POST':
@@ -35,6 +37,7 @@ class DecryptedNoteDetail(APIView):
 
 class NoteAccessKeyList(generics.ListCreateAPIView):
     serializer_class = NoteAccessKeyCreationSerializer
+    pagination_class = DefaultPagination
 
     def check_permissions(self, request):
         note = get_object_or_404(EncryptedNote, uuid=self.kwargs['note_uuid'])
