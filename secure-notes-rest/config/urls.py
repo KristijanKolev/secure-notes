@@ -16,6 +16,12 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 
+from config.views import error400, error404, error500
+
+handler400 = error400
+handler404 = error404
+handler500 = error500
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('encrypted_notes.urls'), name='encrypted-notes'),

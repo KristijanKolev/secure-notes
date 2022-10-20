@@ -2,6 +2,7 @@ import os
 
 from rest_framework import serializers
 from django.db import transaction
+from django.db.utils import IntegrityError
 
 from cryptography.fernet import InvalidToken
 
@@ -105,11 +106,17 @@ class NoteAccessKeyCreationSerializer(serializers.ModelSerializer):
             new_password_encryption_key = generate_password_key(new_password, new_salt)
             new_binary_encrypted_key, *_ = encrypt_data(payload_encryption_key, new_password_encryption_key)
 
-            return NoteAccessKey.objects.create(
-                note=note,
-                name=validated_data['name'],
-                salt=new_salt,
-                encrypted_key=new_binary_encrypted_key
-            )
+            try:
+                return NoteAccessKey.objects.create(
+                    note=note,
+                    name=validated_data['name'],
+                    salt=new_salt,
+                    encrypted_key=new_binary_encrypted_key
+                )
+            except IntegrityError as e:
+                if 'unique constraint' in str(e).lower():
+                    raise serializers.ValidationError("Name must be unique!")
+                else:
+                    raise e
 
         raise serializers.ValidationError("Provided password doesn't match any of the keys for this note!")
