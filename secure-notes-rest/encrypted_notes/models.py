@@ -11,6 +11,9 @@ class EncryptedNote(models.Model):
     title = models.CharField(max_length=100)
     content = models.BinaryField(editable=True, blank=True)
 
+    class Meta:
+        ordering = ['-created']
+
     def __str__(self):
         return f'EncryptedNote({self.uuid}): {self.title}'
 
@@ -25,6 +28,7 @@ class NoteAccessKey(models.Model):
 
     class Meta:
         unique_together = ('note', 'name')
+        ordering = ['-created']
 
     def __str__(self):
         return f'NoteAccessKey({self.uuid}): {self.note.title} | {self.name}'
