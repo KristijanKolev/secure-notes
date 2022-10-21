@@ -1,6 +1,9 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.exceptions import InvalidToken
+from django.contrib.auth.validators import UnicodeUsernameValidator
+from django.contrib.auth.models import User
+from django.db import IntegrityError
 
 
 REFRESH_TOKEN_COOKIE_NAME = 'refresh_token'
@@ -19,3 +22,18 @@ class CookieTokenRefreshSerializer(TokenRefreshSerializer):
                                f'\'{REFRESH_TOKEN_COOKIE_NAME}\'')
 
         return super().validate(attrs)
+
+
+class UserSignupSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=150, validators=[UnicodeUsernameValidator])
+    password = serializers.CharField(max_length=128)
+
+    def create(self, validated_data):
+        try:
+            new_user = User(username=validated_data['username'])
+            new_user.set_password(validated_data['password'])
+            new_user.save()
+        except IntegrityError:
+            raise serializers.ValidationError('Username already exists!')
+
+        return {"username": new_user.username}
