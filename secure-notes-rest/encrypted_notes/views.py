@@ -11,9 +11,11 @@ from encrypted_notes.pagination import DefaultPagination
 
 
 class EncryptedNoteList(generics.ListCreateAPIView):
-    queryset = EncryptedNote.objects.all()
     permission_classes = [permissions.IsAuthenticated]
     pagination_class = DefaultPagination
+
+    def get_queryset(self):
+        return EncryptedNote.objects.filter(creator=self.request.user)
 
     def get_serializer_class(self):
         if self.request.method == 'POST':
