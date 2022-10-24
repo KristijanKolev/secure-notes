@@ -1,11 +1,6 @@
-import http
-
-from rest_framework import permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenRefreshView, TokenObtainPairView
-from django.db import transaction
-from django.contrib.auth.models import User
 
 from config.settings import SIMPLE_JWT
 from user_management.serializers import REFRESH_TOKEN_COOKIE_NAME, CookieTokenRefreshSerializer, UserSignupSerializer

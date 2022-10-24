@@ -1,6 +1,5 @@
 from django.shortcuts import get_object_or_404
-from rest_framework import generics
-from rest_framework import permissions
+from rest_framework import status, generics, permissions
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -52,3 +51,20 @@ class NoteAccessKeyList(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         note = get_object_or_404(EncryptedNote, uuid=self.kwargs['note_uuid'])
         return serializer.save(note=note)
+
+
+class NoteAccessKeyDetail(APIView):
+
+    def delete(self, request, uuid):
+        access_key = get_object_or_404(NoteAccessKey, uuid=uuid)
+
+        if request.user != access_key.note.creator:
+            raise PermissionDenied("Must be note creator to remove access key!")
+
+        if access_key.note.access_keys.all().count() == 1:
+            return Response(
+                data={'detail': 'Cannot delete note\'s only access key. Add a new key before deleting this one.'},
+                status=status.HTTP_409_CONFLICT)
+
+        access_key.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
