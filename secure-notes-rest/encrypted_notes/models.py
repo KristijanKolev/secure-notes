@@ -32,3 +32,18 @@ class NoteAccessKey(models.Model):
 
     def __str__(self):
         return f'NoteAccessKey({self.uuid}): {self.note.title} | {self.name}'
+
+
+class EncryptedNoteFile(models.Model):
+
+    def _generate_file_path(self, original_name):
+        return f'note_files/{self.note.uuid}/{original_name}'
+
+    uuid = models.UUIDField(unique=True, default=uuid.uuid4)
+    created = models.DateTimeField(auto_now_add=True)
+    file = models.FileField(upload_to=_generate_file_path)
+    note = models.ForeignKey(EncryptedNote, related_name='attachments', on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = ('note', 'file')
+        ordering = ['-created']

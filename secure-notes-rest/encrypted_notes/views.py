@@ -1,12 +1,18 @@
+import io
+import mimetypes
+
 from django.shortcuts import get_object_or_404
+from django.http import FileResponse, HttpResponse
 from rest_framework import status, generics, permissions
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser
 
-from encrypted_notes.models import EncryptedNote, NoteAccessKey
+from encrypted_notes.models import EncryptedNote, NoteAccessKey, EncryptedNoteFile
 from encrypted_notes.serializers import (EncryptedNoteDefaultSerializer, EncryptedNoteCreationSerializer,
-                                         DecryptedNoteReadSerializer, NoteAccessKeyCreationSerializer)
+                                         DecryptedNoteReadSerializer, NoteAccessKeyCreationSerializer,
+                                         EncryptedNoteFileSerializer)
 from encrypted_notes.pagination import DefaultPagination
 
 
@@ -36,16 +42,18 @@ class DecryptedNoteDetail(APIView):
         return Response(serializer.data)
 
 
-class NoteAccessKeyList(generics.ListCreateAPIView):
-    serializer_class = NoteAccessKeyCreationSerializer
-    pagination_class = DefaultPagination
-
+class NoteChildPermissionsMixin:
     def check_permissions(self, request):
         note = get_object_or_404(EncryptedNote, uuid=self.kwargs['note_uuid'])
         if request.user.is_anonymous:
             raise PermissionDenied("Must be authenticated to access this resource!")
         if request.user != note.creator:
             raise PermissionDenied("Must be note creator to access this resource!")
+
+
+class NoteAccessKeyList(NoteChildPermissionsMixin, generics.ListCreateAPIView):
+    serializer_class = NoteAccessKeyCreationSerializer
+    pagination_class = DefaultPagination
 
     def get_queryset(self):
         return NoteAccessKey.objects.filter(note__uuid=self.kwargs['note_uuid'])
@@ -70,3 +78,15 @@ class NoteAccessKeyDetail(APIView):
 
         access_key.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class EncryptedFileList(NoteChildPermissionsMixin, generics.ListCreateAPIView):
+    serializer_class = EncryptedNoteFileSerializer
+    parser_classes = [MultiPartParser]
+
+    def get_queryset(self):
+        return EncryptedNoteFile.objects.filter(note__uuid=self.kwargs['note_uuid'])
+
+    def perform_create(self, serializer):
+        note = get_object_or_404(EncryptedNote, uuid=self.kwargs['note_uuid'])
+        return serializer.save(note=note)

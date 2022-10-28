@@ -1,14 +1,16 @@
+import io
 import os
 
 from rest_framework import serializers
 from django.db import transaction
 from django.db.utils import IntegrityError
-
+from django.core.files.uploadedfile import InMemoryUploadedFile
 from cryptography.fernet import InvalidToken
 
-from encrypted_notes.models import EncryptedNote, NoteAccessKey
+from encrypted_notes.models import EncryptedNote, NoteAccessKey, EncryptedNoteFile
 from encrypted_notes.encryption_utils import (generate_password_key, encrypt_data, decrypt_data, binary_to_string,
                                               str_to_binary)
+
 
 
 class EncryptedNoteDefaultSerializer(serializers.ModelSerializer):
@@ -116,6 +118,58 @@ class NoteAccessKeyCreationSerializer(serializers.ModelSerializer):
             except IntegrityError as e:
                 if 'unique constraint' in str(e).lower():
                     raise serializers.ValidationError("Name must be unique!")
+                else:
+                    raise e
+
+        raise serializers.ValidationError("Provided password doesn't match any of the keys for this note!")
+
+
+class EncryptedNoteFileSerializer(serializers.ModelSerializer):
+    note = serializers.ReadOnlyField(source='note.name')
+    password = serializers.CharField(min_length=8, max_length=50, required=True, write_only=True)
+
+    class Meta:
+        model = EncryptedNoteFile
+        fields = ('uuid', 'created', 'file', 'note', 'password')
+
+    def create(self, validated_data):
+        password = validated_data['password']
+        note = validated_data['note']
+        original_file: InMemoryUploadedFile = validated_data['file']
+
+        for existing_access_key in note.access_keys.all():
+            salt = bytes(existing_access_key.salt)
+            binary_encrypted_key = bytes(existing_access_key.encrypted_key)
+
+
+            password_encryption_key = generate_password_key(password, salt)
+            try:
+                payload_encryption_key = decrypt_data(binary_encrypted_key, password_encryption_key)
+            except InvalidToken:
+                # An InvalidToken exception means the password doesn't match the given access key.
+                # Continuing cycle to try with the next key
+                continue
+
+            file_contents = original_file.read()
+            encrypted_contents, *_ = encrypt_data(file_contents, payload_encryption_key)
+            encrypted_buffer = io.BytesIO(encrypted_contents)
+            encrypted_file = InMemoryUploadedFile(
+                encrypted_buffer,
+                field_name=original_file.field_name,
+                name=original_file.name,
+                content_type=original_file.content_type,
+                size=original_file.size,
+                charset=original_file.charset
+            )
+
+            try:
+                return EncryptedNoteFile.objects.create(
+                    note=note,
+                    file=encrypted_file
+                )
+            except IntegrityError as e:
+                if 'unique constraint' in str(e).lower():
+                    raise serializers.ValidationError("Filename must be unique for this note!")
                 else:
                     raise e
 
