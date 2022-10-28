@@ -43,7 +43,8 @@ class EncryptedNoteFile(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     file = models.FileField(upload_to=_generate_file_path)
     note = models.ForeignKey(EncryptedNote, related_name='attachments', on_delete=models.CASCADE)
+    name = models.CharField(max_length=200)
 
     class Meta:
-        unique_together = ('note', 'file')
+        unique_together = ('note', 'name')
         ordering = ['-created']

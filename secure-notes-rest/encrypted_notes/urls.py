@@ -11,8 +11,5 @@ urlpatterns = [
     path('notes/<uuid:note_uuid>/attachments', views.EncryptedFileList.as_view(), name='note-files-list'),
 
     path('keys/<uuid:uuid>', views.NoteAccessKeyDetail.as_view(), name='access-key-detail'),
-
-
-
-    path('docs/', views.DecryptedFileDownload.as_view())
+    path('attachments/<uuid:uuid>', views.DecryptedFileDetail.as_view(), name='note-file-decrypted')
 ]

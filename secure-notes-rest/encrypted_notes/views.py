@@ -3,7 +3,7 @@ import mimetypes
 
 from django.shortcuts import get_object_or_404
 from django.http import FileResponse, HttpResponse
-from rest_framework import status, generics, permissions
+from rest_framework import status, generics, permissions, serializers
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -12,7 +12,7 @@ from rest_framework.parsers import MultiPartParser
 from encrypted_notes.models import EncryptedNote, NoteAccessKey, EncryptedNoteFile
 from encrypted_notes.serializers import (EncryptedNoteDefaultSerializer, EncryptedNoteCreationSerializer,
                                          DecryptedNoteReadSerializer, NoteAccessKeyCreationSerializer,
-                                         EncryptedNoteFileSerializer)
+                                         EncryptedNoteFileSerializer, decrypt_file)
 from encrypted_notes.pagination import DefaultPagination
 
 
@@ -90,3 +90,20 @@ class EncryptedFileList(NoteChildPermissionsMixin, generics.ListCreateAPIView):
     def perform_create(self, serializer):
         note = get_object_or_404(EncryptedNote, uuid=self.kwargs['note_uuid'])
         return serializer.save(note=note)
+
+
+class DecryptedFileDetail(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request, uuid):
+        encrypted_file = get_object_or_404(EncryptedNoteFile, uuid=uuid)
+        if 'password' not in request.data:
+            raise serializers.ValidationError("Must provide password to decrypt note!")
+        password = request.data['password']
+        decrypted_contents = decrypt_file(encrypted_file, password)
+
+        mimetype, _ = mimetypes.guess_type(encrypted_file.name)
+        response = HttpResponse(decrypted_contents, content_type=mimetype)
+        response['Content-Disposition'] = f"attachment; filename={encrypted_file.name}"
+
+        return response
