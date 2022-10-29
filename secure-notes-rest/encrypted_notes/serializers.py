@@ -13,14 +13,6 @@ from encrypted_notes.encryption_utils import (generate_password_key, encrypt_dat
 
 
 class EncryptedNoteDefaultSerializer(serializers.ModelSerializer):
-    creator = serializers.ReadOnlyField(source='creator.username')
-
-    class Meta:
-        model = EncryptedNote
-        fields = ('uuid', 'title', 'created', 'last_update', 'creator')
-
-
-class EncryptedNoteCreationSerializer(serializers.ModelSerializer):
     DEFAULT_ACCESS_KEY_NAME = 'Initial'
 
     password = serializers.CharField(min_length=8, max_length=50, required=True, write_only=True)
@@ -29,7 +21,7 @@ class EncryptedNoteCreationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = EncryptedNote
-        exclude = ('content', 'id')
+        fields = ('uuid', 'title', 'created', 'last_update', 'creator', 'password', 'payload')
 
     def create(self, validated_data):
         password = validated_data.pop('password')

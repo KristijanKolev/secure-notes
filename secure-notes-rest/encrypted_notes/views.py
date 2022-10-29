@@ -11,24 +11,18 @@ from rest_framework.parsers import MultiPartParser
 
 from util.exceptions import CustomStatusError
 from encrypted_notes.models import EncryptedNote, NoteAccessKey, EncryptedNoteFile
-from encrypted_notes.serializers import (EncryptedNoteDefaultSerializer, EncryptedNoteCreationSerializer,
-                                         DecryptedNoteReadSerializer, NoteAccessKeyCreationSerializer,
-                                         EncryptedNoteFileSerializer, decrypt_file)
+from encrypted_notes.serializers import (EncryptedNoteDefaultSerializer, DecryptedNoteReadSerializer,
+                                         NoteAccessKeyCreationSerializer, EncryptedNoteFileSerializer, decrypt_file)
 from encrypted_notes.pagination import DefaultPagination
 
 
 class EncryptedNoteList(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
     pagination_class = DefaultPagination
+    serializer_class = EncryptedNoteDefaultSerializer
 
     def get_queryset(self):
         return EncryptedNote.objects.filter(creator=self.request.user)
-
-    def get_serializer_class(self):
-        if self.request.method == 'POST':
-            return EncryptedNoteCreationSerializer
-        else:
-            return EncryptedNoteDefaultSerializer
 
     def perform_create(self, serializer):
         serializer.save(creator=self.request.user)
