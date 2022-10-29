@@ -14,6 +14,7 @@ from encrypted_notes.models import EncryptedNote, NoteAccessKey, EncryptedNoteFi
 from encrypted_notes.serializers import (EncryptedNoteDefaultSerializer, DecryptedNoteReadSerializer,
                                          NoteAccessKeyCreationSerializer, EncryptedNoteFileSerializer, decrypt_file)
 from encrypted_notes.pagination import DefaultPagination
+from encrypted_notes.permissions import IsCreatorOrReadOnly
 
 
 class EncryptedNoteList(generics.ListCreateAPIView):
@@ -35,6 +36,12 @@ class DecryptedNoteDetail(APIView):
         note = get_object_or_404(EncryptedNote, uuid=uuid)
         serializer = DecryptedNoteReadSerializer(note, context=request.data)
         return Response(serializer.data)
+
+
+class NoteDelete(generics.DestroyAPIView):
+    permission_classes = [IsCreatorOrReadOnly]
+    queryset = EncryptedNote.objects.all()
+    lookup_field = 'uuid'
 
 
 class NoteChildPermissionsMixin:
