@@ -1,14 +1,15 @@
-import io
 import mimetypes
 
 from django.shortcuts import get_object_or_404
-from django.http import FileResponse, HttpResponse
+from django.http import HttpResponse
+from django.conf import settings
 from rest_framework import status, generics, permissions, serializers
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser
 
+from util.exceptions import CustomStatusError
 from encrypted_notes.models import EncryptedNote, NoteAccessKey, EncryptedNoteFile
 from encrypted_notes.serializers import (EncryptedNoteDefaultSerializer, EncryptedNoteCreationSerializer,
                                          DecryptedNoteReadSerializer, NoteAccessKeyCreationSerializer,
@@ -74,7 +75,8 @@ class NoteAccessKeyDetail(APIView):
         if access_key.note.access_keys.all().count() == 1:
             return Response(
                 data={'detail': 'Cannot delete note\'s only access key. Add a new key before deleting this one.'},
-                status=status.HTTP_409_CONFLICT)
+                status=status.HTTP_409_CONFLICT
+            )
 
         access_key.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -89,6 +91,13 @@ class EncryptedFileList(NoteChildPermissionsMixin, generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         note = get_object_or_404(EncryptedNote, uuid=self.kwargs['note_uuid'])
+        attachments_limit = settings.ENCRYPTED_NOTES['NOTE_MAX_ATTACHMENTS']
+        if self.get_queryset().count() >= attachments_limit:
+            raise CustomStatusError(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f'Limit of attachments exceeded for this note. Max allowed: {attachments_limit}.',
+                code='limit_exceeded'
+            )
         return serializer.save(note=note)
 
 
