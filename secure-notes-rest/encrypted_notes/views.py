@@ -95,6 +95,15 @@ class EncryptedFileList(NoteChildPermissionsMixin, generics.ListCreateAPIView):
 class DecryptedFileDetail(APIView):
     permission_classes = [permissions.AllowAny]
 
+    def check_permissions(self, request):
+        if request.method == 'DELETE':
+            encrypted_file = get_object_or_404(EncryptedNoteFile, uuid=self.kwargs['uuid'])
+            if request.user.is_anonymous:
+                raise PermissionDenied("Must be authenticated to delete this resource!")
+            if request.user != encrypted_file.note.creator:
+                raise PermissionDenied("Must be parent note creator to delete this resource!")
+
+
     def post(self, request, uuid):
         encrypted_file = get_object_or_404(EncryptedNoteFile, uuid=uuid)
         if 'password' not in request.data:
@@ -107,3 +116,9 @@ class DecryptedFileDetail(APIView):
         response['Content-Disposition'] = f"attachment; filename={encrypted_file.name}"
 
         return response
+
+    def delete(self, request, uuid):
+        encrypted_file = get_object_or_404(EncryptedNoteFile, uuid=uuid)
+        encrypted_file.delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
