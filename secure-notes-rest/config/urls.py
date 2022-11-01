@@ -25,9 +25,9 @@ handler404 = error404
 handler500 = error500
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('', include('encrypted_notes.urls'), name='encrypted-notes'),
-    path('auth/', include('user_management.urls'), name='user-management'),
-    path('schema/', SpectacularAPIView.as_view(), name='schema'),
-    path('schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('api/admin/', admin.site.urls),
+    path('api/', include('encrypted_notes.urls'), name='encrypted-notes'),
+    path('api/auth/', include('user_management.urls'), name='user-management'),
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
 ]
