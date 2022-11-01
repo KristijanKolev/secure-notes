@@ -1,24 +1,23 @@
-import { Injectable } from '@angular/core';
+import {Injectable} from '@angular/core';
 import {HttpClient} from "@angular/common/http";
-import {environment} from "../../environments/environment";
 import {TokenInfo} from "./models/TokenInfo";
-import { tap } from 'rxjs/operators'
 import {BehaviorSubject, Observable} from "rxjs";
+import {tap} from "rxjs/operators";
 import {Router} from "@angular/router";
 
 
-const AUTH_API = 'api/auth/'
+const AUTH_API_URL = 'api/auth/';
 
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
-  private accessToken: any;
-  private refreshToken: any;
-  private accessTokenInfo?: TokenInfo;
-  private refreshTimeout?: NodeJS.Timeout;
+  public accessToken: any;
+  public refreshToken: any;
+  public accessTokenInfo?: TokenInfo;
   public accessTokenInfo$: BehaviorSubject<any>;
+  private refreshTimeout?: NodeJS.Timeout;
 
 
   constructor(
@@ -28,21 +27,26 @@ export class AuthService {
     this.accessTokenInfo$ = new BehaviorSubject({});
   }
 
-  login(username: string, password: string): void {
-    this.httpClient.post(AUTH_API + 'token/', {username, password}, {withCredentials: true})
-      .subscribe(resp => this.handleAuthResponse(resp));
+  login(username: string, password: string): Observable<any> {
+    return this.httpClient.post(AUTH_API_URL + 'token/', {username, password}, {withCredentials: true}).pipe(
+        tap(resp => this.handleAuthResponse(resp))
+      );
   }
 
-  refreshAuth(): void {
-    this.httpClient.post(AUTH_API + 'token/refresh/', {}, {withCredentials: true})
-      .subscribe(resp => this.handleAuthResponse(resp));
+  refreshAuth(): Observable<any> {
+    return this.httpClient.post(AUTH_API_URL + 'token/refresh/', {}, {withCredentials: true}).pipe(
+        tap(resp => this.handleAuthResponse(resp))
+      );
   }
 
-  public logout() {
+  public logout(): Observable<any> {
     // Must call lougout endpoint to clear http-only cookie.
-    this.httpClient.post(AUTH_API + 'logout/', {}, {withCredentials: true})
-      .subscribe(() => this.clearAuthInfo());
-
+    return this.httpClient.post(AUTH_API_URL + 'logout/', {}, {withCredentials: true}).pipe(
+        tap(() => {
+          this.clearAuthInfo();
+          clearTimeout(this.refreshTimeout);
+        })
+      );
   }
 
   private clearAuthInfo() {
