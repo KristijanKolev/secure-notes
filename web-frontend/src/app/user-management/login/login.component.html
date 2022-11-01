@@ -1,0 +1,16 @@
+<h2>Sign In to Secure Notes</h2>
+<div class="main-container">
+    <form>
+      <div>
+        <label class="form-label" for="username-input">Username:</label>
+        <input class="form-control" id="username-input" name="username" type="text" [(ngModel)]="username"/>
+      </div>
+      <div>
+        <label class="form-label" for="password-input">Password:</label>
+        <input class="form-control" id="password-input" name="password" type="password" [(ngModel)]="password"/>
+      </div>
+      <div class="mt-2">
+        <input type="submit" value="Log In" (click)="login()" class="btn btn-success"/>
+      </div>
+    </form>
+</div>
